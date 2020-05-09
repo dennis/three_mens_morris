@@ -1,14 +1,19 @@
-require "pry"
+# frozen_string_literal: true
+
+require 'pry'
 
 require_relative 'lib/game'
 require_relative 'lib/board'
 
+# Very crude UI for showing three men's morris
 class Tui
   def run
-    begin
+    loop do
       clear
       render_board
-    end while prompt
+
+      break unless prompt
+    end
 
     puts "WINNER: #{game.winner}"
   end
@@ -19,60 +24,82 @@ class Tui
     puts "\e[H\e[2J"
   end
 
+  TEMPLATE = <<~STR
+        0   1   2
+      .-----------.
+    0 |{0}|{1}|{2}|
+      |---+---+---|
+    1 |{3}|{4}|{5}|
+      |---+---+---|
+    2 |{6}|{7}|{8}|
+      `---+---+---`
+  STR
+
+  PIECES = {
+    nil => '   ',
+    :black => ' b ',
+    :white => ' w '
+  }.freeze
+
   def render_board
-    puts game.board
-      .map { |row| ([""] + row.map(&method(:piece_to_ascii)) + [""]).join(" | ") }
-      .join("\n")
+    template = TEMPLATE
+
+    (0...3).each do |xpos|
+      (0...3).each do |ypos|
+        template = render_board_cell(xpos, ypos, template)
+      end
+    end
+
+    puts template
     puts
   end
 
+  def render_board_cell(xpos, ypos, template)
+    idx = ypos * 3 + xpos
+    placeholder = "{#{idx}}"
+    value = PIECES.fetch(game.piece_at(xpos, ypos))
+
+    template.sub(placeholder, value)
+  end
+
   def prompt
-    begin
-      puts "#{game.player_turn}:"
-      
-      case game.action
-      when :place
-        puts "place at"
+    puts "#{game.player_turn}:"
 
-        xpos, ypos = gets.split(",")
-        game.add_piece(xpos.to_i, ypos.to_i)
+    send "handle_#{game.action}".to_sym
+  rescue Board::InvalidMove
+    puts 'Move not allowed'
+    retry
+  end
 
-        true
-      when :move
-        puts "move piece"
-        puts "  from: "
-        from_x, from_y = gets.split(",")
-        puts "  to: "
-        to_x, to_y = gets.split(",")
+  def handle_place
+    puts 'place at'
 
-        game.move_piece(from_x.to_i, from_y.to_i, to_x.to_i, to_y.to_i)
+    xpos, ypos = gets.split(',').map(&:to_i)
+    game.add_piece(xpos, ypos)
 
-        true
-      when :done
-        puts "DONE"
+    true
+  end
 
-        false
-      end
+  def handle_move
+    puts 'move piece from:'
+    from_x, from_y = gets.split(',').map(&:to_i)
 
-    rescue Board::InvalidMove
-      puts "Move not allowed"
-      retry
-    end
+    puts "move piece from #{from_x},#{from_y} to:"
+    to_x, to_y = gets.split(',').map(&:to_i)
+
+    game.move_piece(from_x, from_y, to_x, to_y)
+
+    true
+  end
+
+  def handle_done
+    puts 'DONE'
+
+    false
   end
 
   def game
     @game ||= Game.new(::Board.new)
-  end
-
-  def piece_to_ascii(piece)
-    case piece
-    when nil
-      "-"
-    when :black
-      "b"
-    when :white
-      "w"
-    end
   end
 end
 

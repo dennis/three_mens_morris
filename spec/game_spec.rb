@@ -81,6 +81,14 @@ RSpec.describe Game do
 
       expect { game.move_piece(0, 0, 1, 1) }.to raise_error Game::InvalidState
     end
+
+    it 'returns the piece at 1,1' do
+      expect(game.piece_at(1, 1)).to eq(:white)
+    end
+
+    it 'returns nil as there is no piece at 2,2' do
+      expect(game.piece_at(2, 2)).to eq(nil)
+    end
   end
 
   context 'when all pieces are placed on board' do

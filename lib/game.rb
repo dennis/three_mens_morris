@@ -54,6 +54,10 @@ class Game
     end
   end
 
+  def piece_at(xpos, ypos)
+    @board.at(xpos, ypos)
+  end
+
   def winner
     # horizontal
     a = check_winning_rows(@board.to_a)
